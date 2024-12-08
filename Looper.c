@@ -1,36 +1,41 @@
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/syscall.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <string.h>
+#include <unistd.h>
+
 
 void handler(int sig)
 {
-	printf("\nRecieved Signal : %s\n", strsignal(sig));
-	if (sig == SIGTSTP)
-	{
-		signal(SIGTSTP, SIG_DFL);
-	}
-	else if (sig == SIGCONT)
-	{
-		signal(SIGCONT, SIG_DFL);
-	}
-	signal(sig, SIG_DFL);
-	raise(sig);
+    printf("\nReceived Signal: %s (%d)\n", strsignal(sig), sig);
+
+    if (sig == SIGTSTP)
+    {
+        // Reinstall the handler for SIGCONT before propagating SIGTSTP
+        signal(SIGCONT, handler);
+    }
+    else if (sig == SIGCONT)
+    {
+        // Reinstall the handler for SIGTSTP after SIGCONT
+        signal(SIGTSTP, handler);
+    }
+
+    // Propagate the signal to the default handler
+    signal(sig, SIG_DFL);
+    raise(sig);
 }
 
-int main(int argc, char **argv)
-{
 
-	printf("Starting the program\n");
-	signal(SIGINT, handler);
-	signal(SIGTSTP, handler);
-	signal(SIGCONT, handler);
+int main() {
+    
+    signal(SIGTSTP, handler); // Handle SIGTSTP (Ctrl+Z)
+    signal(SIGINT, handler);  // Handle SIGINT (Ctrl+C)
+    signal(SIGCONT, handler); // Handle SIGCONT (fg or continue)
 
-	while (1)
-	{
-		sleep(1);
-	}
+    // Infinite loop to simulate a looper program
+    while (1) {
+        sleep(1); // Sleep for 1 second to avoid busy-waiting
+    }
 
-	return 0;
+    return 0; // Program should never reach this point
 }
