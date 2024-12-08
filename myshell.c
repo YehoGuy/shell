@@ -6,12 +6,47 @@
 #include <errno.h>
 #include "LineParser.h" 
 #include <signal.h> // Added for signal handling
+#include <fcntl.h>
+
 
 #define MAX_INPUT_SIZE 2048
 
 int debug_mode = 0;
 
 void execute(cmdLine *pCmdLine) {
+    // Task 3: Handle input/output redirection in the child process
+    if (pCmdLine->inputRedirect) {
+        int file_descriptor = open(pCmdLine->inputRedirect, O_RDONLY);
+        if (file_descriptor == -1) {
+            if(debug_mode==1)
+                perror("Failed to open input file");
+            _exit(1);
+        }
+        //duplicate input file to STDINput
+        if (dup2(file_descriptor, STDIN_FILENO) == -1) {
+            if(debug_mode==1)
+                perror("Failed to redirect input");
+            _exit(1);
+        }
+        close(file_descriptor);
+    }
+
+    if (pCmdLine->outputRedirect) {
+        int file_descriptor = open(pCmdLine->outputRedirect, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (file_descriptor == -1) {
+            if(debug_mode==1)
+                perror("Failed to open output file");
+            _exit(1);
+        }
+        //duplicate output to STDOUTput
+        if (dup2(file_descriptor, STDOUT_FILENO) == -1) {
+            if(debug_mode==1)
+                perror("Failed to redirect output");
+            _exit(1);
+        }
+        close(file_descriptor);
+    }
+
     if (execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1) {
         perror("Execution failed");
         _exit(1); // Exit abnormally in case of execvp failure
