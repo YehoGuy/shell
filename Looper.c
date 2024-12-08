@@ -11,12 +11,12 @@ void handler(int sig)
 
     if (sig == SIGTSTP)
     {
-        // Reinstall the handler for SIGCONT before propagating SIGTSTP
+        // Reinstate the handler for SIGCONT before propagating SIGTSTP
         signal(SIGCONT, handler);
     }
     else if (sig == SIGCONT)
     {
-        // Reinstall the handler for SIGTSTP after SIGCONT
+        // Reinstate the handler for SIGTSTP after SIGCONT
         signal(SIGTSTP, handler);
     }
 

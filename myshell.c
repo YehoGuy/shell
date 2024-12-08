@@ -8,6 +8,8 @@
 
 #define MAX_INPUT_SIZE 2048
 
+int debug_mode = 0;
+
 void execute(cmdLine *pCmdLine) {
     if (execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1) {
         perror("Execution failed");
@@ -15,22 +17,30 @@ void execute(cmdLine *pCmdLine) {
     }
 }
 
-int main() {
+int main(int argc, char **argv) {
     char cwd[PATH_MAX]; // Buffer to store the current working directory
     char input[MAX_INPUT_SIZE]; // Buffer to store user input
     cmdLine *parsedLine;
 
+     // Check for debug mode (-d flag)
+    if (argc > 1 && strcmp(argv[1], "-d") == 0) {
+        debug_mode = 1;
+        fprintf(stderr, "Debug mode activated\n");
+    }
+
     while (1) {
         // Display the prompt (current working directory)
         if (getcwd(cwd, sizeof(cwd)) == NULL) {
-            perror("getcwd failed");
+            if(debug_mode==1)
+                perror("getcwd failed");
             continue;
         }
         printf("%s> ", cwd);
 
         // Read input from the user
         if (fgets(input, MAX_INPUT_SIZE, stdin) == NULL) {
-            perror("fgets failed");
+            if(debug_mode==1)
+                perror("fgets failed");
             continue;
         }
 
@@ -47,14 +57,18 @@ int main() {
         // Parse the input
         parsedLine = parseCmdLines(input);
         if (parsedLine == NULL) {
-            fprintf(stderr, "Failed to parse command\n");
+            if(debug_mode==1)
+                fprintf(stderr, "Failed to parse command\n");
             continue;
         }
+
+
 
         // Fork a new process to execute the command
         int pid = fork();
         if (pid == -1) {
-            perror("Fork failed");
+            if(debug_mode==1)
+                perror("Fork failed");
             freeCmdLines(parsedLine);
             continue;
         }
