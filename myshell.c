@@ -4,7 +4,8 @@
 #include <linux/limits.h>
 #include <string.h>
 #include <errno.h>
-#include "LineParser.h" // Assuming LineParser.c and LineParser.h are in the same directory
+#include "LineParser.h" 
+#include <signal.h> // Added for signal handling
 
 #define MAX_INPUT_SIZE 2048
 
@@ -16,6 +17,47 @@ void execute(cmdLine *pCmdLine) {
         _exit(1); // Exit abnormally in case of execvp failure
     }
 }
+
+void handle_signal_command(cmdLine *parsedLine) {
+    if (parsedLine->argCount < 2) {
+        fprintf(stderr, "Error: Missing PID argument\n");
+        return;
+    }
+
+    int pid = atoi(parsedLine->arguments[1]); // Convert PID argument to an integer
+    if (pid <= 0) {
+        fprintf(stderr, "Error: Invalid PID\n");
+        return;
+    }
+
+    if (strcmp(parsedLine->arguments[0], "stop") == 0) {
+        // Send SIGSTOP signal
+        if (kill(pid, SIGSTOP) == -1) {
+            perror("Failed to send SIGSTOP");
+        } else if (debug_mode == 1) {
+            fprintf(stderr, "Sent SIGSTOP to process %d\n", pid);
+        }
+    } else if (strcmp(parsedLine->arguments[0], "wake") == 0) {
+        // Send SIGCONT signal
+        if (kill(pid, SIGCONT) == -1) {
+            perror("Failed to send SIGCONT");
+        } else if (debug_mode == 1) {
+            fprintf(stderr, "Sent SIGCONT to process %d\n", pid);
+        }
+    } else if (strcmp(parsedLine->arguments[0], "term") == 0) {
+        // Send SIGINT signal
+        if (kill(pid, SIGINT) == -1) {
+            perror("Failed to send SIGINT");
+        } else if (debug_mode == 1) {
+            fprintf(stderr, "Sent SIGINT to process %d\n", pid);
+        }
+    } else {
+        fprintf(stderr, "Error: Unknown signal command\n");
+    }
+}
+
+
+
 
 int main(int argc, char **argv) {
     char cwd[PATH_MAX]; // Buffer to store the current working directory
@@ -74,6 +116,15 @@ int main(int argc, char **argv) {
             } else if (debug_mode == 1) {
                 fprintf(stderr, "Directory changed to: %s\n", parsedLine->arguments[1]);
             }
+            continue;
+        }
+
+        // Handle signal commands: stop, wake, term
+        if (strcmp(parsedLine->arguments[0], "stop") == 0 ||
+            strcmp(parsedLine->arguments[0], "wake") == 0 ||
+            strcmp(parsedLine->arguments[0], "term") == 0) {
+            handle_signal_command(parsedLine); // Handle the signal command
+            freeCmdLines(parsedLine);
             continue;
         }
 
