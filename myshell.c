@@ -28,6 +28,8 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Debug mode activated\n");
     }
 
+   
+
     while (1) {
         // Display the prompt (current working directory)
         if (getcwd(cwd, sizeof(cwd)) == NULL) {
@@ -62,7 +64,18 @@ int main(int argc, char **argv) {
             continue;
         }
 
-
+        // handle cd in the parent process
+        if (strcmp(parsedLine->arguments[0], "cd") == 0) {
+            if (parsedLine->argCount < 2) {
+                fprintf(stderr, "cd: Missing argument\n");
+            } else if (chdir(parsedLine->arguments[1]) == -1) {
+                if(debug_mode == 1)
+                    perror("cd failed");
+            } else if (debug_mode == 1) {
+                fprintf(stderr, "Directory changed to: %s\n", parsedLine->arguments[1]);
+            }
+            continue;
+        }
 
         // Fork a new process to execute the command
         int pid = fork();
@@ -77,8 +90,15 @@ int main(int argc, char **argv) {
             // Child process: execute the command
             execute(parsedLine);
         } else {
+            //1a?
+            if (debug_mode==1) {
+                fprintf(stderr, "PID: %d\n", pid);
+                fprintf(stderr, "Executing command: %s\n", parsedLine->arguments[0]);
+            }
             // Parent process: wait for the child process to complete
-            waitpid(pid, NULL, 0);
+            if(parsedLine->blocking){
+                waitpid(pid, NULL, 0);
+            }
         }
 
         // Release the parsed command resources
